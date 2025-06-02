@@ -1,0 +1,36 @@
+#Hello World Module
+
+- Execution
+```
+make
+insmod helloworld_rpi5.ko
+dmesg | tail -5
+modinfo helloworld_rpi5.ko
+rmmod helloworld_rpi5.ko
+```
+
+##Basic functions/commands
+- pr_info() - used to print log messages in kernel space
+- __init - marks for initialization function 
+- __exit - marks up the cleanup function
+- module_init() - macro to register the module initialization function  
+- module_exit() - macro to register the module cleanup function 
+
+MODULE_LICENSE("GPL") - must macro, if not set then kernel will become tainted, meaning that it is in a state that is not supported by the community
+- without this the module will not compile
+
+MODULE_AUTHOR() - author of the module
+MODULE_DESCRIPTION() - description of module
+
+There are two ways for writing the module.. 
+1. writing it on host machine (any linux distro) cross-compiling it and transferring the .ko file to pi using scp.. 
+ - must** kernel in both the machine should be same.. 
+
+2. Writing and compiling directly on the raspberry pi itself.. 
+ - installing the raspberrypi-kernel-headers and compiling on it and running
+
+
+Commands used: (must have root privileges)
+- insmod <module>.ko: used to load the module
+- modinfo <module>.ko: module macros defined in module
+- rmmod <module>.ko: removing the module
