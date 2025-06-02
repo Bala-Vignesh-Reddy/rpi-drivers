@@ -1,4 +1,4 @@
-obj-m := helloworld_rpi_taint.o
+obj-m := helloworld_rpi5.o
 
 KERNEL_DIR ?= $(HOME)/linux_rpi/linux
 
