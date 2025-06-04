@@ -24,6 +24,10 @@
 #define DEVICE_NAME "mydev"
 #define CLASS_NAME "hello_class"
 
+static struct class *helloClass;
+static struct cdev my_dev;
+dev_t dev;
+
 static int my_dev_open(struct inode *inode, struct file *file){
 	pr_info("my_dev_open() is called\n");
 	return 0;
@@ -34,8 +38,8 @@ static int my_dev_close(struct inode *inode, struct file *file){
 	return 0;
 }
 
-static int my_dev_ioctl(struct file *file, unsinged int cmd, unsinged long arg){
-	pr_info("my_dev_ioctl() is called. cmd=%d, arg=%d\n", cmd, arg);
+static long my_dev_ioctl(struct file *file, unsigned int cmd, unsigned long arg){
+	pr_info("my_dev_ioctl() is called. cmd=%d, arg=%ld\n", cmd, arg);
 	return 0;
 }
 
@@ -46,7 +50,7 @@ static const struct file_operations my_dev_fops = {
 	.unlocked_ioctl = my_dev_ioctl,
 };
 
-static int __init hello_int(void){
+static int __init hello_init(void){
 	int ret;
 	dev_t dev_no;
 	int Major;
@@ -79,7 +83,7 @@ static int __init hello_int(void){
 	}
 
 	/* register the device class */
-	helloClass = class_create(THIS_MODULE, CLASS_NAME);
+	helloClass = class_create(CLASS_NAME);
 	if (IS_ERR(helloClass)){
 		unregister_chrdev_region(dev, 1);
 		cdev_del(&my_dev);
@@ -101,7 +105,7 @@ static int __init hello_int(void){
 }
 
 static void __exit hello_exit(void){
-	device_destroy(helloDevice, dev);
+	device_destroy(helloClass, dev);
 	class_destroy(helloClass);
 	cdev_del(&my_dev);
 	unregister_chrdev_region(dev, 1);
