@@ -1,4 +1,4 @@
-obj-m := helloworld_rpi5_char_driver.o helloworld_rpi5_class_driver.o
+obj-m := helloworld_rpi5_char_driver.o helloworld_rpi5_class_driver.o misc_rpi5_driver.o
 
 KERNEL_DIR ?= $(HOME)/linux_rpi/linux
 
