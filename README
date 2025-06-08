@@ -1,1 +1,66 @@
 #Linux Drivers with RaspberryPi5
+
+This repo contains code and documentation of my journey into 
+Linux Driver Development on the Raspberry Pi 5.
+
+1. Embedded linux system basics
+ - components: pi5, bootloader, linux kernel, root filesystem, various peripherals
+ (LEDs, Keypad, I2C and USB devices), a host machine for development
+ - Cross-compilation: setting up a toolchain and compiling kernel modules for ARM arch
+ 
+ # Major Commands/Tools
+ - make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- (for kernel/module compiliation)
+ - scp (for transferring compiled modules remotely)
+ - insmod, rmmod, dmesg (module management and debugging)
+
+2. Linux Device and Driver Model
+ - explored the linux device model and how devices, drivers and buses are represented 
+   and managed in the kernel.
+ 
+ - device: physical or virtual object which attaches to bus.
+ - driver: software entity which may probe for and be bound to devices and which can perform 
+           certain mangement functions.
+ - bus: device which serves as an attachment point for other devices.
+
+ # Three main data structures:
+ - bus_type: represents one type of bus (eg. USB, PCI, I2C)
+ - device_driver: represents one driver capabale of handling certain devices on a certain bus
+ - device: represents one device connected to a bus
+
+
+# sysfs filesystem
+ - sysfs is a virtual filesystem that exports information about devices and drivers from the kernel 
+   device model to user space
+   - /sys/bus/ - contains one subdirectory for each of bus type in kernel
+   - /sys/devices/ - contains list of devices ( this contains the device tree )
+   - /sys/bus/<bus>/devices - devices on given bus
+   - /sys/bus/<bus>/drivers - drivers on given bus
+   - /sys/class - subdirectory contains single layer subdirectories for each device class
+
+# Device tree
+ - A devicetree is a tree data structure with nodes that describe the devices in a system. Each 
+   node has property/value pairs that describe the characteristics of the device being represented. 
+   Each node has exactly one parent except for the root node, which has no parent.
+   - bindings: defined for how data should appear in the DT to describe typical hardware characteristics
+   	       of a new device
+   - DT represent as a set of text files in linux kernel source tree, located under arch/arm/boot/dts/
+     *.dtsi files are Device Tree source include files. describes hardware that is common to several 
+            platforms which include these files on their *.dts files.
+     *.dts files are Device Tree source files
+
+   - Linux uses DT data for three major purposes:
+     1. platform indentification: kernel use data in DT to identiy the specific machine.
+     2. runtime configuration: in most cases, a DT will be only method to communicating data from u-boot
+        to kernel, so DT can be used to pass in runtime configuration data
+     3. Device population: after board has been identified, after early config data has been parsed, 
+        then kernel initialization can proceed in normal way.
+   - Device tree complier (dtc) compiles the DT source into a binary form (.dtb)
+
+ # Major Functions used
+ - bus_register(): function registers the bus with the kobject infra and creates a /sys/bus/platform
+ 		   directory that consists of two directories devices and drivers.
+ - device_register(): when new device is plugged into system, the bus controlled driver detects the 
+ 		      calls this function.
+	- bus: member is pointer to bus_type structure to which device driver is registered
+	- probe: member is a callback function that is called for each device detected.
+	- remove: member is callback function that is called to unbind the driver
