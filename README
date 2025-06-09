@@ -87,11 +87,39 @@ Linux Driver Development on the Raspberry Pi 5.
    - cdev_del() - function to delete the cdev structure
  
    - mknod - utility provided by the linux to create a device node to reference the driver
-   -mknod has 4 parameters
+   - mknod has 4 parameters
      first is name of device node
      second indicates whether the driver to which device node interfaces is block driver or character driver
      last two param are major and minor numbers.
  
+ 
+   - using the devtmpfs to create device node instead of doing it manually as done in helloworld_rpi5_char_driver.
+     - A linux driver creates/destroy the class by using following kernel APIs.
+     - class_create() - creates a class for the device visible in /sys/class
+     - class_destroy() - removes the class
+ 
+     Linux driver creates the device node by using following kernel APIs.
+      device_create() - creates a device node in the /dev directory
+      device_destroy() - removes a device node in the /dev directory
+ 
+     driver will have a class name and a device name; hello_class as a class name and mydev as the device name.
+     this results in creation of device that appears on fs at /sys/class/hello_class/mydev
+     alloc_chrdev_region() - automatically allocates a major number to device, registering the device class anc creating the device node.
+ 
+   - Misc Framework is an interface that allows modules to register their individual minor numbers
+     Device driver implemented as miscellaneous characters uses the major number allocated by the kernel for miscellaneous devices. 
+     this eliminates the need to define a unique major no. for driver.
+     
+## Platform Drivers
+   - A platform driver in Linux is a type of driver used for devices that are directly addressed from a CPU bus.
+   - two static methods to describe the device
+     - by direct instantiation of platform_device structres, definition is done in board-specific or SoC specific code.
+     - in device tree, a hardware description file used on some arch, device driver matches with physical devices describes in .dts file
+
+   - Amongst the non-discoverable devices, a huge family is directly part of a system-on-chip: UART
+     controllers, Ethernet controllers, SPI controllers, graphic or audio devices, etc. In the Linux
+     kernel, a special bus, called the platform bus, has been created to handle such devices.
+
 
  # Major Functions/Macro used
  - init(): function called once when driver is loaded.
@@ -107,3 +135,10 @@ Linux Driver Development on the Raspberry Pi 5.
 	- remove: member is callback function that is called to unbind the driver
 
  - module_param(name, type, perm); perm argument specifies permissions of corresponding file in sysfs ideally (S_IRUG0)
+ - probe(): function is called when bus driver pairs the device to device driver, responsible for initializing the device and registering in kernel
+ - suspend() and resume(): functions are used by devices that support low power management features
+ - platform_driver_register(): function responsible for platform device should be registered to platform core
+ - module_platform_driver(): helper macro for drivers, helps eliminates a lot of boilerplate
+ - platform_driver_register(): function when kernel module is loaded, the platform device driver registers itself with the platform bus driver
+ 
+
