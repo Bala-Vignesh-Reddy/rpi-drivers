@@ -56,7 +56,48 @@ Linux Driver Development on the Raspberry Pi 5.
         then kernel initialization can proceed in normal way.
    - Device tree complier (dtc) compiles the DT source into a binary form (.dtb)
 
- # Major Functions used
+## The simplest drivers
+   - User space applications are not allowed to access peripheral register, storage media or even RAM
+     memory directly, the hardware is accessed via kernel drivers, and RAM memory is managed by MMU,
+     with application operating on virtual address.
+   - Device drivers can be kernel module or statically build into kernel image.
+   - A kernel module is not necessarily a device driver; it is an extension of kernel. The kernel 
+     module are loaded in virtual memory of kernel.
+   - LKM(linux loadable kernel modules) have parameters that we can set at load time, boot time or runtime.
+
+   - Linux supports three types of devices: character devices, block devices and network devices
+
+## Character drivers
+   - linux requires a mechanism to transder data from kernel to user space, this transfer of data is
+     handled via device nodes, also known as virtual files, exist within root fs, they are not true files
+ 
+   - Character Device are most common device, which are read and written directly without buffering. eg. keyboards, monitors, printers etc.
+     Block devices can only be written to and read from multiples of block size, typically 512 or 1024 bytes.
+     Network devices are accessed via the BSD socket and interface and networking subsystems.
+ 
+   - In Linux, every device is identified by two numbers: a major number and a minor number. These 
+     numbers can be seen by invoking ls -l /dev on the host PC
+   - MKDEV macro will combine a mjor number and monior number to a dev_t data type used to hold first device identifier
+   - unregister_chrdev_region() - function used to return the devices when module is removed
+   - file_operations structure - defines functions pointer for opening, reading from, writing to the device..
+ 
+   - struct cdev - used to represent character device internally, 
+   - cdev_init() function call will initialize
+   - cdev_add() - add the details to kernel space
+   - cdev_del() - function to delete the cdev structure
+ 
+   - mknod - utility provided by the linux to create a device node to reference the driver
+   -mknod has 4 parameters
+     first is name of device node
+     second indicates whether the driver to which device node interfaces is block driver or character driver
+     last two param are major and minor numbers.
+ 
+
+ # Major Functions/Macro used
+ - init(): function called once when driver is loaded.
+ - exit(): function called when driver is removed, it must free all the resouces that were requested
+           by the init() function
+ - pr_info(): used to print log messages in kernel space
  - bus_register(): function registers the bus with the kobject infra and creates a /sys/bus/platform
  		   directory that consists of two directories devices and drivers.
  - device_register(): when new device is plugged into system, the bus controlled driver detects the 
@@ -64,3 +105,5 @@ Linux Driver Development on the Raspberry Pi 5.
 	- bus: member is pointer to bus_type structure to which device driver is registered
 	- probe: member is a callback function that is called for each device detected.
 	- remove: member is callback function that is called to unbind the driver
+
+ - module_param(name, type, perm); perm argument specifies permissions of corresponding file in sysfs ideally (S_IRUG0)
