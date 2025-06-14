@@ -1,0 +1,33 @@
+/dts-v1/;
+/plugin/;
+
+#include "/home/server/linux_rpi/linux/include/dt-bindings/gpio/gpio.h"
+
+/ {
+    compatible = "brcm,bcm2712"; 
+
+    fragment@0 {
+        target-path = "/";
+        __overlay__ {
+            leds {
+                compatible = "arrow,RGBleds";
+                status = "okay";
+
+                led_red {
+                    label = "ledred";
+                    gpios = <&rp1_gpio 27 GPIO_ACTIVE_HIGH>; 
+                };
+
+                led_green {
+                    label = "ledgreen";
+                    gpios = <&rp1_gpio 22 GPIO_ACTIVE_HIGH>;
+                };
+
+                led_blue {
+                    label = "ledblue";
+                    gpios = <&rp1_gpio 26 GPIO_ACTIVE_HIGH>; 
+                };
+            };
+        };
+    };
+};
