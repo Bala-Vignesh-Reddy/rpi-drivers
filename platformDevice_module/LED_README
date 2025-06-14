@@ -1,0 +1,148 @@
+RGB LED platform device module
+
+##NOTE: there is a hardware chance, in raspberry pi 3 we can directly access the GPIO using MIMO but in pi 5 we can't
+        do that as we have a RP1 I/O controller, which connects over PCIe
+
+# DIFFERENCE:
+    Raspberry pi 3:
+        GPIOs are controlled by the VideoCore via direct MMIO using base address 0x3F000000
+        these address are hardcoded, and we manually ioremap() them
+
+    Raspberry pi 5:
+        GPIOs are controlled by RP1 chip, not the main SoC
+        MMIO access is not stable or documented - instead, we must use the GPIO subsystem exposed by kernel via device tree
+        and framework like gpiolib
+
+
+led-overlays.dts (overlay file)
+```
+/dts-v1/;
+/plugin/;
+
+#include "/home/server/linux_rpi/linux/include/dt-bindings/gpio/gpio.h"
+
+/ {
+    compatible = "brcm,bcm2712";
+
+    fragment@0 {
+        target-path = "/";
+        __overlay__ {
+            leds {
+                compatible = "arrow,RGBleds";
+                status = "okay";
+
+                led_red {
+                    label = "ledred";
+                    gpios = <&rp1_gpio 27 GPIO_ACTIVE_HIGH>;
+                };
+
+                led_green {
+                    label = "ledgreen";
+                    gpios = <&rp1_gpio 22 GPIO_ACTIVE_HIGH>;
+                };
+
+                led_blue {
+                    label = "ledblue";
+                    gpios = <&rp1_gpio 26 GPIO_ACTIVE_HIGH>;
+                };
+            };
+        };
+    };
+};
+```
+
+- in these module we will control several LEDS, mapping from physical to virtual several 
+  peripheral register address of the SoC.
+
+- we have modify the device tree in kernel source.. to add about the led_pin pin configuration
+  node in the respective dts file..
+
+  - there are two ways to do this.. 
+    1. Direct DTS modification (for these modification in `bcm2712-rpi-5-b.dts`)
+       - it changes base hardware description
+       - overwritten by kernel updates
+       - additing permanent hardware to all devices.. 
+    2. DTO (device tree overlays)
+       - in these we create a new file `led-overlays.dts`
+       - then compile this to get the `.dtbo` file and send cp the `.dtbo` in `/boot/firmware/overlays` of pi
+       - to compile run the following commands 
+            `cpp -nostdinc -I include -I /home/server/linux_rpi/linux/include -undef -x assembler-with-cpp leds-overlay.dts \
+             | dtc -@ -I dts -O dtb -o leds.dtbo - `
+             
+             - cpp: is C preprocessor
+             - -I: includes paths for headers
+             - `-undef -x assembler-with-cpp`: ensures clean preprocessing
+             - `|`: pipe output to dtc to compile the processed DTS
+
+             - `-@`: enables symbol support(required for overlays)
+             - `-I dts`: specifies input as device tree source
+             - `-O dts`: specifies output as device tree blob
+             - `-o leds.dtbo`: sets the output file name
+
+       - send the `.dtbo` to pi using 
+            `scp leds.dtbo balavignesh@192.168.1.7:/home/balavignesh/test/`
+
+       - `chmod +x leds.dtbo`
+       - mv that `leds.dtbo` to `/boot/firmware/overlays` using `sudo mv leds.dtbo /boot/firmware/overlays/`
+       - edit `/boot/config.txt` and add `dtoverlay=leds`
+       - reboot the pi `sudo reboot`
+        
+       - to crosscheck whether overlay enabled or not
+         - `ls /proc/device-tree/` it will have the leds/ directory inside that it will contain the node created for each gpio
+
+
+## Execution steps
+- first we need to load the module.. 
+    `sudo insmod leds_driver.ko`
+- then use the following command for handling the LEDs
+    `echo 1 | sudo tee /dev/ledred` - on red led
+    `echo 0 | sudo tee /dev/ledred` - off red led
+    similary for all leds
+- remove the module
+    `sudo rmmod leds_driver`
+
+## sample bash script to toggle between different leds
+```
+#/bin/bash
+sudo insmod test/leds_driver.ko
+for i in {1..5}; do
+        echo 1 | sudo tee /dev/ledgreen
+        sleep 1
+        echo 0 | sudo tee /dev/ledgreen
+        sleep 1
+        echo 1 | sudo tee /dev/ledred
+        sleep 1
+        echo 0 | sudo tee /dev/ledred
+        sleep 1
+        echo 1 | sudo tee /dev/ledblue
+        sleep 1
+        echo 0 | sudo tee /dev/ledblue
+        sleep 1
+done
+sudo rmmod leds_driver
+```
+
+
+## Problems faced during building
+- problem in writing the overlay
+    - compatible was written for the parent node.. but not for the child nodes present.. 
+    - problem caused: we can't directly use of_property_read_string as it does not have any label.. 
+    - to overcome: 
+       - 1. write the compatible in every child node..
+       - 1. loop over child nodes inside leds_probe()
+            - not recommoned because we lose the modularity
+            - we can't independently add/remove LED
+- segmentation fault
+    - during `insmod`
+       - leds_device was uninitialized at that point, so it resulted in to seg fault.. need to restart everything 
+         we have a seg fault
+    - during `rmmod`
+       - removing driver caused a segfault in leds_remove()
+       - cause: platform_set_drvdata() was incorrectly storing a single led_device* instead of all LED device
+       - solution: made changes by creating a structure `struct leds_drvdata` to store an array of struct `led_dev *`
+            - stored this in platform_set_drvdata()
+
+
+## Notes
+- .remove callback in platform_driver expects a function that return void
+- .probe callback in platform_driver return sucess or failure (int)
