@@ -18,7 +18,7 @@
  *  - writes to devices turn the LEDs on/off
  *  - memory and resource management using devm_* APIs
  *
- *  @detailed explnataion: LED_README
+ *  @detailed explanation: LED_README
  *
  */
 #include <linux/module.h>
