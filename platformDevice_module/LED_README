@@ -61,7 +61,7 @@ led-overlays.dts (overlay file)
     1. Direct DTS modification (for these modification in `bcm2712-rpi-5-b.dts`)
        - it changes base hardware description
        - overwritten by kernel updates
-       - additing permanent hardware to all devices.. 
+       - adding permanent hardware to all devices.. 
     2. DTO (device tree overlays)
        - in these we create a new file `led-overlays.dts`
        - then compile this to get the `.dtbo` file and send cp the `.dtbo` in `/boot/firmware/overlays` of pi
